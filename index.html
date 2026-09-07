@@ -75,6 +75,22 @@
             font-size: 14px;
         }
 
+        .accessibility-toggle-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.3em;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .accessibility-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .accessibility-bar button {
             background-color: var(--key-bg);
             color: var(--text);
@@ -713,17 +729,168 @@
             color: var(--primary);
             margin: 20px 0;
         }
+
+        /* ===== התאמות למסכי מובייל (portrait) ===== */
+        @media (max-width: 600px) {
+            body {
+                padding: 8px;
+            }
+
+            .container {
+                padding: 15px;
+                border-radius: 14px;
+                margin-top: 60px;
+            }
+
+            /* תג "אורח"/שם משתמש ותג המטבעות: נשארים במיקום מוחלט
+               (בדיוק כמו בדסקטופ), רק עם קואורדינטות ומידות מותאמות
+               למרווח הקטן יותר של המסך - כל אחד בפינה שלו, לא ממורכזים */
+            .user-display,
+            .coins-display {
+                top: 12px;
+                font-size: 0.8em;
+                padding: 5px 10px;
+            }
+
+            .coins-display {
+                right: 10px;
+            }
+
+            .user-display {
+                left: 10px;
+            }
+
+            .screen {
+                margin-top: 48px;
+            }
+
+            /* סרגל נגישות: כפתור צף שפותח פאנל מתקפל */
+            .accessibility-bar {
+                top: 10px;
+                right: 10px;
+                padding: 0;
+                border-radius: 50%;
+                width: 44px;
+                height: 44px;
+                justify-content: center;
+            }
+
+            .accessibility-toggle-btn {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 44px;
+                height: 44px;
+            }
+
+            .accessibility-controls {
+                display: none;
+                position: absolute;
+                top: 50px;
+                right: 0;
+                background-color: var(--card-bg);
+                border: 2px solid var(--border-color);
+                border-radius: 14px;
+                padding: 10px 12px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                white-space: nowrap;
+            }
+
+            .accessibility-controls.open {
+                display: flex;
+            }
+
+            .dark-mode-toggle {
+                top: 10px;
+                left: 10px;
+                width: 44px;
+                height: 44px;
+                font-size: 1.3rem;
+            }
+
+            .home-icon {
+                font-size: 2.8em !important;
+            }
+
+            /* אזור המקלדת: המקלדת מלמעלה בכל הרוחב, רמז/כניעה בשורה קטנה מתחתיה */
+            .keyboard-wrapper {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                grid-template-areas:
+                    "keyboard keyboard"
+                    "surrender hint";
+                gap: 8px;
+                width: 100%;
+            }
+
+            #keyboard {
+                grid-area: keyboard;
+                max-width: 100%;
+                gap: 6px;
+            }
+
+            #surrender-btn {
+                grid-area: surrender;
+            }
+
+            #hint-btn {
+                grid-area: hint;
+            }
+
+            .hint-btn-square, .surrender-btn-square {
+                width: 100%;
+                height: 52px;
+                flex-direction: row;
+                font-size: 0.8rem;
+            }
+
+            .key {
+                padding: 8px 9px;
+                font-size: 1em;
+            }
+
+            .letter-box {
+                min-width: 32px;
+                height: 46px;
+                font-size: 1.4em;
+                padding: 0 2px;
+            }
+
+            .word-display {
+                gap: 8px;
+                margin: 12px 0 18px 0;
+            }
+
+            .track-container {
+                height: 120px;
+            }
+
+            .character {
+                font-size: 3rem;
+            }
+
+            .noose {
+                width: 38px;
+                height: 70px;
+            }
+        }
     </style>
 </head>
 <body>
 
-<div class="accessibility-bar">
-    <span>גודל כתב:</span>
-    <button onclick="changeFontSize(2)">הגדל (+)</button>
-    <button onclick="changeFontSize(-2)">הקטן (-)</button>
-    <button onclick="resetFontSize()">איפוס</button>
-    <input type="number" id="fontSizeInput" min="12" max="32" value="16" onchange="setFontSize(this.value)">
-    <span>px</span>
+<div class="accessibility-bar" id="accessibility-bar">
+    <button class="accessibility-toggle-btn" id="accessibility-toggle" onclick="toggleAccessibilityBar()" title="הגדרות נגישות" aria-label="הגדרות נגישות">⚙️</button>
+    <div class="accessibility-controls" id="accessibility-controls">
+        <span>גודל כתב:</span>
+        <button onclick="changeFontSize(2)">הגדל (+)</button>
+        <button onclick="changeFontSize(-2)">הקטן (-)</button>
+        <button onclick="resetFontSize()">איפוס</button>
+        <input type="number" id="fontSizeInput" min="12" max="32" value="16" onchange="setFontSize(this.value)">
+        <span>px</span>
+    </div>
 </div>
 
 <button class="dark-mode-toggle" id="darkModeBtn" onclick="toggleDarkMode()" title="החלף מצב תצוגה">🌙</button>
@@ -927,6 +1094,11 @@
 </div>
 
 <script>
+    function toggleAccessibilityBar() {
+        const controls = document.getElementById('accessibility-controls');
+        controls.classList.toggle('open');
+    }
+
     let currentFontSize = 16;
     const defaultFontSize = 16;
 
