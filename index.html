@@ -193,6 +193,14 @@
             display: flex;
         }
 
+        /* מתן גובה ממשי למסך המשחק בלבד, כדי שהמילה תוכל להתמרכז
+           דינמית ברווח שנשאר בין אנימציית האיש התלוי לבין המקלדת.
+           הגובה נגזר מגובה החלון בפועל (100vh) פחות השטח שתופסים
+           הרווחים הקבועים סביב הכרטיס - כך שזה מגיב אמיתית לגודל המסך. */
+        #game-screen.active {
+            min-height: max(340px, calc(100vh - 240px));
+        }
+
         h1 {
             color: var(--primary);
             font-size: 2.5em;
@@ -533,19 +541,18 @@
             transform: scale(1.6) translateY(-20px);
         }
 
-        .game-area-wrapper {
-            position: relative;
+        .word-center-area {
+            flex: 1;
             width: 100%;
             display: flex;
-            flex-direction: column;
             align-items: center;
+            justify-content: center;
         }
 
         .word-display {
             display: flex;
             gap: 14px;
             justify-content: center;
-            margin: 20px 0 30px 0;
             flex-wrap: wrap;
         }
 
@@ -555,6 +562,7 @@
             height: 60px;
             font-size: 2em;
             font-weight: bold;
+            line-height: 1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -762,6 +770,10 @@
 
             .screen {
                 margin-top: 48px;
+            }
+
+            #game-screen.active {
+                min-height: max(300px, calc(100vh - 200px));
             }
 
             /* סרגל נגישות: כפתור צף שפותח פאנל מתקפל */
@@ -1046,24 +1058,24 @@
             <button id="fog-btn" class="btn-power btn-fog" onclick="activateFog()">🌫️ ערפל (החזר דמות לרקע)</button>
         </div>
 
-        <div class="game-area-wrapper">
+        <div class="word-center-area">
             <div id="word-display" class="word-display"></div>
-            
-            <div class="keyboard-wrapper">
-                <button id="surrender-btn" class="surrender-btn-square" onclick="surrenderGame()">
-                    <span>🏳️</span>
-                    <span>כניעה</span>
-                </button>
+        </div>
 
-                <div id="keyboard" class="keyboard"></div>
+        <div class="keyboard-wrapper">
+            <button id="surrender-btn" class="surrender-btn-square" onclick="surrenderGame()">
+                <span>🏳️</span>
+                <span>כניעה</span>
+            </button>
 
-                <button id="hint-btn" class="hint-btn-square" onclick="buyHint()">
-                    <span>💡</span>
-                    <span>רמז</span>
+            <div id="keyboard" class="keyboard"></div>
+
+            <button id="hint-btn" class="hint-btn-square" onclick="buyHint()">
+                <span>💡</span>
+                <span>רמז</span>
                     <span id="hint-cost">חינם</span>
                 </button>
             </div>
-        </div>
     </div>
 </div>
 
@@ -1323,14 +1335,17 @@
         return isSingleWord && isHebrewOnly && isGoodLength;
     }
 
+    // פענוח משותף למחרוזות Base64 (UTF-8 בטוח) - משמש גם לרשימת המילים וגם לקודי הקופון
+    function decodeB64(str) {
+        return new TextDecoder('utf-8').decode(
+            Uint8Array.from(atob(str), c => c.charCodeAt(0))
+        );
+    }
+
     // רשימת הקטגוריות והמילים מקודדת ב-Base64 כדי שלא תופיע כטקסט קריא
     // ב"הצג מקור" רגיל של הדפדפן. הפענוח קורה פה, בזמן טעינת הדף.
     const _categoriesB64 = "W3sibmFtZSI6IteX15nXldeqIPCfpoEiLCJ3b3JkcyI6WyLXkNeo15nXlCIsIteg157XqCIsIteW15DXkSIsIteT15XXkSIsIteQ16jXoNeRIiwi15fXqteV15wiLCLXm9ec15EiLCLXktee15wiLCLXl9eW15nXqCIsIten15XXoyIsItep15XXotecIiwi16HXldehIiwi15fXnteV16giLCLXpteR15kiLCLXoteY15zXoyIsIteS15nXqNek15QiLCLXp9eg15LXldeo15UiLCLXpNeg15PXlCIsIteZ16LXnCIsIteT15HXmdeR15XXnyIsIten15nXpNeV15MiLCLXodeg15DXmSIsItei15vXkdeoIiwi16TXqNeUIiwi15vXkdep15QiLCLXlteR16jXlCIsIten16jXoNejIiwi15TXmdek15XXpNeV15jXnSIsIten15XXkNec15QiLCLXnNeV15XXmdeq158iLCLXk9eV15zXpNeZ158iLCLXkNeV15LXqCIsIteX15XXnNeT15QiLCLXoNee15nXmdeUIiwi16TXmdecIiwi15jXmdeS16jXmdehIiwi15DXmdeZ15wiLCLXmdei158iLCLXqteg15nXnyIsIteg15fXqSIsItem16TXqNeT16IiLCLXl9eo15PXldefIiwi16LXp9eo15EiLCLXoNep16giLCLXmdeg16nXldejIiwi15PXqNeV16giLCLXqteV15vXmSIsItek15nXoNeS15XXldeZ158iLCLXp9eo16TXk9eUIiwi15zXkdeZ15AiLCLXodec157XoNeT16jXlCIsIteX15nXnNeW15XXnyIsIteq157XoNeV158iLCLXm9eo15nXqSIsIteh16jXmNefIiwi16bXnNeV16TXlyJdfSx7Im5hbWUiOiLXnteT15nXoNeV16og15TXoteV15zXnSDwn4yNIiwid29yZHMiOlsi15nXqdeo15DXnCIsItem16jXpNeqIiwi15LXqNee16DXmdeUIiwi15DXmdeY15zXmdeUIiwi16HXpNeo15MiLCLXmdek158iLCLXodeZ158iLCLXp9eg15PXlCIsIteR16jXlteZ15wiLCLXntem16jXmdedIiwi15nXldeV158iLCLXlNeV15PXlSIsIteo15XXodeZ15QiLCLXnten16HXmden15UiLCLXkdeo15nXmNeg15nXlCIsItek15XXqNeY15XXktecIiwi16nXldeV15PXmdeUIiwi16DXldeo15XXldeS15nXlCIsItek15nXoNec16DXkyIsIteT16DXnteo16ciLCLXkdec15LXmdeUIiwi15TXldec16DXkyIsItep15XXldeZ16UiLCLXkNeV16HXmNeo15nXlCIsItek15XXnNeZ158iLCLXmNeV16jXp9eZ15QiLCLXqteQ15nXnNeg15MiLCLXldeZ15nXmNeg15DXnSIsIten15XXqNeZ15DXlCIsIteQ15XXodeY16jXnNeZ15QiLCLXkNeo15LXoNeY15nXoNeUIiwi16fXldec15XXnteR15nXlCIsIteg15nXkteo15nXlCIsIten16DXmdeUIiwi157XqNeV16fXlSIsIteq15XXoNeZ16HXmdeUIiwi15DXmdeo15DXnyIsItei15nXqNeQ16ciLCLXmdeo15PXnyIsItec15HXoNeV158iLCLXodeV16jXmdeUIiwi15DXlden16jXkNeZ16DXlCIsIteR15XXnNeS16jXmdeUIiwi16jXldee16DXmdeUIiwi15TXldeg15LXqNeZ15QiLCLXp9eo15XXkNeY15nXlCIsIteh16jXkdeZ15QiLCLXkNec15HXoNeZ15QiLCLXnNeZ15jXkCIsItec15jXkdeZ15QiLCLXkNeh15jXldeg15nXlCIsIteQ15nXodec16DXkyIsIteQ15nXqNec16DXkyIsItee15zXmNeUIiwi16fXpNeo15nXodeZ158iLCLXpNeo15UiLCLXkNen15XXldeT15XXqCIsIteV16DXpteV15DXnNeUIiwi15HXldec15nXkdeZ15QiLCLXpNeo15LXldeV15DXmSIsIten15XXkdeUIiwi16TXoNee15QiLCLXkteV15DXmNee15zXlCIsIteU15XXoNeT15XXqNehIiwi16DXmden16jXkteV15DXlCIsIteS15DXoNeUIiwi15DXldeS16DXk9eUIiwi15bXmdee15HXkdeV15DXlCIsIteW157XkdeZ15QiLCLXkNeg15LXldec15QiLCLXnteV15bXnteR15nXpyIsIteY16DXlteg15nXlCIsIteQ16rXmdeV16TXmdeUIiwi16HXldeT158iLCLXnNeV15EiLCLXp9eW15fXodeY158iLCLXnteV16DXkteV15zXmdeUIiwi157XnNeW15nXlCIsIteh15nXoNeS16TXldeoIiwi16fXnteR15XXk9eZ15QiLCLXnNeQ15XXoSIsIteg16TXkNecIiwi15HXlNeV15jXnyIsItek16fXmdeh15jXnyIsIteR16DXktec15PXqSIsIteQ16TXkteg15nXodeY158iLCLXodeV157XnNeZ15QiLCLXmNeV15LXlSIsIteR16DXmdefIiwi157XkNec15kiLCLXp9eV16DXkteVIiwi15LXkdeV158iLCLXqNeV15DXoNeT15QiLCLXkdeV16jXldeg15PXmSIsItee15zXkNeV15XXmSIsIteg157XmdeR15nXlCIsIteR15XXpteV15DXoNeUIiwi15zXodeV15jXlSJdfSx7Im5hbWUiOiLXoteo15nXnSDXkdeZ16nXqNeQ15wg8J+Pme+4jyIsIndvcmRzIjpbIteZ16jXldep15zXmdedIiwi15fXmdek15QiLCLXkNeZ15zXqiIsIteg16rXoNeZ15QiLCLXkNep15PXldeTIiwi16jXoteg16DXlCIsIteU16jXptec15nXlCIsIteY15HXqNeZ15QiLCLXoteb15UiLCLXptek16oiLCLXl9eV15zXldefIiwi15DXqden15zXldefIiwi16DXlNeo15nXlCIsIteT15nXnteV16DXlCIsItei16jXkyIsIteZ15HXoNeUIiwi157XldeT15nXoteZ158iLCLXnNeV15MiLCLXqNee15zXlCIsItei16TXldec15QiLCLXm9eo157XmdeQ15wiLCLXoNem16jXqiIsItep15PXqNeV16oiLCLXkNeo15nXkNecIiwi157Xotec15XXqiIsIteo15TXmCIsIteX15PXqNeUIiwi15jXmdeo15QiLCLXqdek16jXotedIiwi15DXldek16fXmdedIiwi16DXqteZ15HXldeqIiwi16nXldeU150iLCLXkteR16LXqteZ15nXnSIsIteZ16fXoNei150iLCLXkteT16jXlCIsItei15XXnteoIiwi157Xmdeq16giLCLXnNeU15HXmdedIiwi16DXqdeoIiwi16HXl9eg15nXnyIsItei16jXkNeR15QiLCLXnteS15PXnCIsIteQ15zXoteTIiwi16TXqNeT16HXmdeUIiwi15fXldeo16TXmdepIiwi16TXp9eZ16LXmdefIiwi16LXldeh16TXmdeQIiwi15jXnteo15QiLCLXnteS15DXqCIsIteZ16jXm9eQIiwi15vXkNeR15XXnCIsIteQ16LXkdec15nXnyIsIteo15nXmdeg15QiLCLXmNeV16jXoteQ158iLCLXpNeV16jXmdeZ15PXmdehIiwi15DXldeo16DXmdeqIl19LHsibmFtZSI6Itee15DXm9ec15nXnSDwn42VIiwid29yZHMiOlsi16TXmdem15QiLCLXlNee15HXldeo15LXqCIsItek15zXkNek15wiLCLXl9eV157XldehIiwi16HXldep15kiLCLXqden16nXlden15QiLCLXodec15giLCLXnteo16ciLCLXktec15nXk9eUIiwi16LXldeS15QiLCLXpNeh15jXlCIsItep16DXmdem15wiLCLXkdeV16jXp9ehIiwi16nXldeV15DXqNee15QiLCLXp9eR15EiLCLXpNep15jXmdeT15QiLCLXoteV15LXmdeZ15QiLCLXldeV16TXnCIsIten16jXpCIsItec15bXoNeZ15QiLCLXqNeZ15bXldeY15UiLCLXp9eQ16jXmSIsIteY15DXp9eVIiwi16TXoNen15nXmdenIiwi15jXldeh15giLCLXl9eR15nXqteUIiwi15zXl9edIiwi15LXkdeZ16DXlCIsIteZ15XXkteV16jXmCIsIten16bXmdem15XXqiIsIten15XXoden15XXoSIsItee15XXoden15QiLCLXmNeX15nXoNeUIiwi15bXoteq16giLCLXpNeZ16rXlCIsItec15DXpNeUIiwi16fXldeR15QiLCLXm9eo15nXmiIsIteg16fXoNeZ16ciLCLXoNeQ15LXmNehIiwi16TXmdeo15QiLCLXkNeV16jXliIsItee16fXqNeV16DXmSIsItei15PXqdeZ150iLCLXl9ee15nXnyIsIten16DXmdeZ15PXnNeaIiwi15HXmdeZ15LXnNeUIiwi15fXnNeR15QiLCLXp9eo15XXkNeh15XXnyIsItee15DXpNeZ158iLCLXkdeo15DXldeg15kiLCLXmNeZ16jXnteZ16HXlSIsItek15XXk9eZ16DXkiIsItee15XXoSIsIteh15XXpNec15QiLCLXoNen16DXmden15nXlCIsIteh15jXmdeZ16ciLCLXmNeV16jXmNeZ15nXlCIsItee15XXltec15kiLCLXkteo16DXldec15QiLCLXk9eZ15nXodeUIl19LHsibmFtZSI6Itek15nXqNeV16og15XXmdeo16fXldeqIPCfjY4iLCJ3b3JkcyI6WyLXqtek15XXlyIsIteR16DXoNeUIiwi16rXpNeV15YiLCLXkNeR15jXmdeXIiwi16LXoNeR15nXnSIsItee15zXpNek15XXnyIsItei15LXkdeg15nXlCIsIteS15bXqCIsItec15nXnteV158iLCLXqteV16oiLCLXkNeS16EiLCLXkNek16jXodenIiwi15HXptecIiwi16fXmdeV15XXmSIsItee16DXkteVIiwi15DXoNeg16EiLCLXkNeR15XXp9eT15UiLCLXqdeW15nXoyIsIteT15XXkdeT15HXnyIsItek15jXnCIsIteQ15XXm9ee16DXmdeV16oiLCLXm9eo15XXkdeZ16oiLCLXkdeo15XXp9eV15zXmSIsIteq16jXkyIsIteX16HXlCIsItek15zXpNecIiwi16fXmdep15XXkCIsItep15XXnSIsIteR15jXmNeUIiwi16bXoNeV16DXmdeqIiwi15vXqNeV15EiLCLXkNek16jXodee15XXnyIsIteo15nXnteV158iLCLXntep157XqSIsItek16TXkNeZ15QiLCLXp9ec157XoNeY15nXoNeUIiwi15DXqdeb15XXnNeZ16oiLCLXntec15XXnyIsIteS15XXmdeQ15HXlCIsIten15XXp9eV16EiLCLXqtee16giLCLXqden15MiLCLXkNeS15XXliIsIteR15XXmNefIiwi16TXp9eQ158iLCLXp9ep15nXlSIsIteq15nXqNehIiwi15DXpNeV16DXlCIsItep16LXldei15nXqiIsIteX16bXmdecIiwi15vXqNeZ16nXlCIsIteh15zXqNeZIiwi15DXqNeY15nXqdeV16ciLCLXm9eV16HXkdeo15QiLCLXoNei16DXoiIsIteW16DXkteR15nXnCIsItem16DXldefIiwi15zXpNeqIiwi16HXnNenIiwi15PXnNei16oiLCLXqdeV157XqCJdfSx7Im5hbWUiOiLXnten16bXldei15XXqiDwn5Go4oCN4pqV77iPIiwid29yZHMiOlsi16jXldek15AiLCLXnteV16jXlCIsItep15XXmNeoIiwi15vXkdeQ15DXmSIsIteY15HXlyIsIteY15nXmdehIiwi16DXkteoIiwi16nXldek15giLCLXltee16giLCLXpteZ15nXqCIsIteX16fXnNeQ15kiLCLXkNeT16jXmdeb15wiLCLXl9ep157XnNeQ15kiLCLXnteU16DXk9ehIiwi16LXmdeq15XXoNeQ15kiLCLXpNeh15nXm9eV15zXldeSIiwi15XXmNeo15nXoNeoIiwi15LXoNefIiwi15fXmdeZ15giLCLXkNeV16TXlCIsItek15XXotecIiwi157Xldeb16giLCLXnteq15vXoNeqIiwi16LXldeo15oiLCLXmNeb16DXkNeZIiwi157Xk9eo15nXmiIsItep15fXp9efIiwi15HXnNepIiwi15PXldeS157XnyIsIteb15PXldeo15LXnNefIiwi16HXpNeoIiwi16jXlden15ciLCLXkNeX15XXqiIsItee15bXm9eZ16jXlCIsIteR16DXp9eQ15kiLCLXmdeW150iLCLXnteQ15HXmNeXIiwi16nXqNeR16jXkSIsItem15HXoiIsItek16HXnCIsIteb16rXkSIsItee16DXqteXIiwi16jXldei15QiLCLXk9eZ15nXkiIsIteX15nXmdecIiwi16TXmdeW15nXp9eQ15kiLCLXm9eZ157XkNeZIiwi15HXmdeV15zXldeSIiwi15LXmdeQ15XXnNeV15IiLCLXpNeh15nXm9eZ15DXmNeoIiwi157XnNem16giLCLXkdeo157XnyIsIten15XXpNeQ15kiLCLXoNeU15IiLCLXp9eR16jXoNeZ15giLCLXqdeV16LXqCIsItee15DXntefIiwi16nXk9eo158iLCLXptec150iLCLXntei16bXkSIsIteS15bXkdeoIiwi16nXkteo15nXqCIsIteX15XXp9eoIl19LHsibmFtZSI6Iteh16TXldeo15gg4pq9Iiwid29yZHMiOlsi15vXk9eV16jXktecIiwi15vXk9eV16jXodecIiwi15jXoNeZ16EiLCLXqdeX15nXmdeUIiwi16jXmdem15QiLCLXodeZ16MiLCLXlNeV16fXmSIsIteb15PXldeo16LXoyIsIteS15XXnNejIiwi15DXkteo15XXoyIsIteU16rXotee15zXldeqIiwi15HXmdeZ16HXkdeV15wiLCLXm9eT15XXqNeZ15MiLCLXkNeq15zXmNeZ16fXlCIsIten16TXmdem15QiLCLXlteo15nXp9eUIiwi15fXqteZ16jXlCIsItep15nXmCIsIten16jXkNeY15QiLCLXoden15kiLCLXktec15nXqdeUIiwi15jXqNeZ15DXqtec15XXnyIsIteR15PXnteZ16DXmNeV158iLCLXqNeb15nXkdeUIiwi15jXmdek15XXoSIsItem15zXmdec15QiLCLXodeg15XXp9eoIiwi15HXldec15nXoNeSIiwi16nXl9ee15giLCLXk9ee16fXlCIsIteh16DXldeR15XXqNeTIiwi15TXl9ec16fXlCIsIteU15nXkNeR16fXldeqIiwi16fXmdeQ16ciLCLXpteg15nXl9eUIiwi16TXmdec15DXmNeZ16EiLCLXmdeV15LXlCIsIteo15nXp9eV15MiLCLXp9eo15zXmdeg15IiLCLXqNeV15LXkdeZIiwi16fXqNeZ16fXmCIsItee16nXp9eV15zXldeqIiwi16HXpNeo15nXoNeYIiwi157XqNeq15XXnyIsIteh15XXpNeY15HXldecIiwi15TXnNeZ15vXlCIsIteR15XXp9ehIiwi16jXkNek15jXmdeg15IiLCLXmNeQ16fXldeV16DXk9eVIiwi16TXkNeT15wiLCLXoden15XXldepIl19LHsibmFtZSI6Iteb15zXmSDXqNeb15Eg15XXqteX15HXldeo15Qg8J+alyIsIndvcmRzIjpbItee15vXldeg15nXqiIsIteQ15XXmNeV15HXldehIiwi16jXm9eR16oiLCLXkNeV16TXoNeZ15nXnSIsIten15jXoNeV16IiLCLXntep15DXmdeqIiwi16HXpNeZ16DXlCIsIteh15nXqNeUIiwi157XmNeV16EiLCLXlNec15nXp9eV16TXmNeoIiwi15DXldeg15nXmdeUIiwi16fXldeo16fXmdeg15giLCLXmNeo16fXmNeV16giLCLXoteS15zXlCIsIteo15vXkdecIiwi157Xldeg15nXqiIsIteh16fXldeY16giLCLXp9eo15XXldeQ158iLCLXkteo16giLCLXkNee15HXldec16DXoSIsItee16DXldejIiwi15PXl9ek15XXqCIsIten15zXoNeV16LXmdeqIiwi16jXpNeh15XXk9eUIiwi16bXldec15zXqiIsIteV15DXnyIsItec15nXnteV15bXmdeg15QiLCLXnteZ16DXmdeR15XXoSIsIteY16DXk9eoIiwi16fXqNeV16DXmdeqIiwi157XodeV16ciLCLXl9ec15zXmdeqIiwi15fXqdee15zXmdeqIiwi15DXldek16DXldeiIiwi16rXnNeq15DXldek158iLCLXnteW15fXnNeqIiwi16fXmNee16jXkNefIiwi15nXkNeb15jXlCIsItee15vXldec15nXqiIsIteb16jXm9eo15QiLCLXnteo15vXkdeUIiwi16jXl9ek158iLCLXmNeo16fXmNeV16jXldefIiwi157XqdeV16jXmdeZ158iLCLXmNeg16ciLCLXp9eo15XXoNeV16IiLCLXp9eo15XXnyIsItee16LXkdeV16jXqiIsIteQ15XXldeZ16jXldefIiwi16fXmNeoIiwi16LXkteV16jXnyJdfSx7Im5hbWUiOiLXm9ec15kg16DXkteZ16DXlCDwn464Iiwid29yZHMiOlsi15LXmdeY16jXlCIsItek16HXoNeq16giLCLXm9eZ16DXldeoIiwi16rXldek15nXnSIsIteX15zXmdecIiwi15fXpteV16bXqNeUIiwi16HXp9eh15XXpNeV158iLCLXp9ec16jXmdeg15giLCLXp9eV16DXmNeo15HXoSIsIteQ16fXldeo15PXmdeV158iLCLXkNeV16jXktefIiwi157XoNeT15XXnNeZ16DXlCIsIteg15HXnCIsItei15XXkteRIiwi15jXldeR15QiLCLXpNei157XldefIiwi16TXotee15XXoNeZ150iLCLXntem15nXnNeq15nXmdedIiwi15DXkdeV15EiLCLXpNeZ16fXldec15UiLCLXp9eV16DXkteUIiwi15jXnteR15XXqNeZ158iLCLXlNeo157Xldeg15nXp9eUIiwi15DXlden15XXnNeZ15zXmSIsItep15XXpNeoIiwi157XqNeZ157XkdeUIiwi16fXodeZ15zXldek15XXnyIsIteV15nXldec15QiLCLXnNeZ16jXlCIsIteq15XXoyIsItee16nXqNeV16fXmdeqIiwi157XpNeV15fXmdeqIiwi16fXqNefIiwi15fXnNeZ15zXmdeqIiwi16HXoNeY15XXqCIsItei15XXkyIsIteT16jXkdeV16fXlCIsIten15DXoNeV158iLCLXkdeW15XXp9eZIiwi16TXotee15XXoNeZ16oiLCLXqNei16nXnyIsIteS15XXoNeSIiwi15HXodeV158iLCLXmNeo15XXnteR15XXnyIsIteY15DXkdec15QiLCLXp9ec15nXk9eZ150iLCLXqdeV16TXqNeV16oiLCLXqNeR15DXkSIsItee16bXmdec15QiLCLXkdeV16DXkteVIl19LHsibmFtZSI6Iteb15zXmSDXoteR15XXk9eUIPCflKgiLCJ3b3JkcyI6WyLXpNeY15nXqSIsItee15HXqNeSIiwi157XodeV16giLCLXnten15PXl9eUIiwi16bXkdeqIiwi157XpNeq15ciLCLXpNec16EiLCLXodeo15LXnCIsItee16nXl9eW16oiLCLXnteh157XqCIsIteR15XXqNeSIiwi15PXkdenIiwi157Xkdeo16nXqiIsIteZ16LXlCIsItee15LXqNek15QiLCLXntei15PXqCIsIteS16jXltefIiwi16TXpteZ16jXlCIsItee15zXl9em15nXmdedIiwi16HXldec150iLCLXl9eR15wiLCLXktec15LXnNeqIiwi15DXltee15wiLCLXnteh16jXkteUIiwi157Xodek16jXmdeZ150iLCLXodeb15nXnyIsItec15TXkSIsIteZ15PXmdeqIiwi15vXpNek15XXqiIsIten16HXk9eUIiwi15DXoNeaIiwi157XkteU16UiLCLXkNeV15zXqCIsItee15bXnteo15QiLCLXnteo15nXpteUIiwi15PXnNeZIiwi157XmNeQ15jXkCIsItee15LXkSIsItek15nXoNem15jXlCIsIteQ15XXnSIsIteZ16rXkyIsIten16jXk9eV150iLCLXqteR16DXmdeqIiwi15PXmdeR15wiLCLXp9eo16EiLCLXodeV15LXqCIsIteq16TXoSIsItee15TXk9enIiwi15bXldeV15nXqtefIiwi157Xp9eR16oiXX0seyJuYW1lIjoi16jXlNeZ15jXmdedINeV15vXnNeZ150g15HXkdeZ16og8J+bi++4jyIsIndvcmRzIjpbItep15XXnNeX158iLCLXm9eZ16HXkCIsIteh16TXlCIsItee15nXmNeUIiwi15DXqNeV158iLCLXnteT16MiLCLXqdeZ15PXlCIsIteb15XXqNeh15QiLCLXqdeY15nXlyIsIteV15nXnNeV158iLCLXnteo15DXlCIsItee16DXldeo15QiLCLXqdei15XXnyIsIteb16jXmdeqIiwi16nXnteZ15vXlCIsItee15bXqNefIiwi15vXldeg16DXmdeqIiwi157Xp9eo16giLCLXqteg15XXqCIsIteb15nXqNeZ15nXnSIsItee15PXmdeXIiwi157XmdeZ15HXqSIsItee15nXp9eo15XXktecIiwi15jXldeh15jXqCIsIten15XXnten15XXnSIsIteR15zXoNeT16giLCLXnteh15fXmNeUIiwi157Xmden16HXqCIsItem15zXl9eqIiwi16fXoteo15QiLCLXm9eV16EiLCLXm9ek15nXqiIsItee15bXnNeSIiwi16HXm9eZ158iLCLXodeZ16giLCLXnteX15HXqiIsItem16DXpteg16oiLCLXkNeS16jXmNecIiwi15DXk9eg15nXqiIsIteq157Xldeg15QiLCLXnteS15HXqiIsIteh15PXmdefIiwi16LXpteZ16UiLCLXpNee15XXmCIsIteQ16jXkteWIiwi157XkteZ16jXlCIsIteT15zXqiIsIteX15zXldefIiwi16LXqNeZ16HXlCIsItec15XXnCIsIteq16jXmdehIiwi157XlteS158iXX1d";
-    const availableCategories = JSON.parse(
-        new TextDecoder('utf-8').decode(
-            Uint8Array.from(atob(_categoriesB64), c => c.charCodeAt(0))
-        )
-    );
+    const availableCategories = JSON.parse(decodeB64(_categoriesB64));
 
     const hebrewAlphabet = [
         'א','ב','ג','ד','ה','ו','ז','ח','ט','י','כ','ל','מ','נ','ס','ע','פ','צ','ק','ר','ש','ת','ם','ן','ץ','ף','ך'
@@ -1497,16 +1512,27 @@
         couponModal.style.display = 'none';
     });
 
+    // קודי הקופון עצמם מקודדים ב-Base64 מאותה סיבה - שלא יופיעו כטקסט קריא ב"הצג מקור"
+    const _couponActivateB64 = "15LXmdeQLteV15zXkzMxMw==";
+    const _couponCancelB64 = "15HXmNecLten15XXk9en15XXpNeV158=";
+
     submitCouponBtn.addEventListener('click', () => {
         const rawCode = modalCouponInput.value.trim();
         
-        if (rawCode === 'גיא.ולד313') {
+        if (rawCode === decodeB64(_couponActivateB64)) {
             symbolCouponActivated = true;
             saveUserData();
             mainCouponInput.value = "קופון סמלים הופעל! ⭐";
             modalCouponInput.value = '';
             couponModal.style.display = 'none';
             alert('קופון סמלים מיוחד הופעל בהצלחה! ⭐ בכל משחק, מילות המטרה יסומנו בכוכב וכל שאר האותיות בסמלים ייחודיים.');
+        } else if (rawCode === decodeB64(_couponCancelB64)) {
+            symbolCouponActivated = false;
+            saveUserData();
+            mainCouponInput.value = '';
+            modalCouponInput.value = '';
+            couponModal.style.display = 'none';
+            alert('כל קודי הקופון שהופעלו עד כה בוטלו.');
         } else if (rawCode !== '') {
             mainCouponInput.value = rawCode;
             modalCouponInput.value = '';
